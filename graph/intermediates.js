@@ -1,12 +1,12 @@
 "use strict";
 
 function getJSON(path, callback) {
-  let req = new XMLHttpRequest();
+  var req = new XMLHttpRequest();
   req.open("GET", path, true);
   req.onreadystatechange = function() {
     if (req.readyState == XMLHttpRequest.DONE && req.status == 200) {
       try {
-        let data = JSON.parse(req.responseText);
+        var data = JSON.parse(req.responseText);
         callback(data);
       } catch (e) {
         console.log(e);
@@ -16,9 +16,9 @@ function getJSON(path, callback) {
   req.send();
 }
 
-let node;
-let link;
-let radius = 8;
+var node;
+var link;
+var radius = 8;
 
 function tick() {
   node.attr("transform", function(d) { return "translate(" + d.x + ", " + d.y + ")"; });
@@ -28,30 +28,30 @@ function tick() {
         if (d.source.x == d.target.x) {
           return d.source.x;
         }
-        let dx = d.target.x - d.source.x;
-        let dx2 = dx * dx;
-        let dy = d.target.y - d.source.y;
-        let dy2 = dy * dy;
-        let delta = Math.sqrt(dx2 + dy2);
-        let sign = d.source.x < d.target.x ? 1 : -1;
+        var dx = d.target.x - d.source.x;
+        var dx2 = dx * dx;
+        var dy = d.target.y - d.source.y;
+        var dy2 = dy * dy;
+        var delta = Math.sqrt(dx2 + dy2);
+        var sign = d.source.x < d.target.x ? 1 : -1;
         return d.source.x + sign * (delta - radius) / Math.sqrt(1 + (dy2 / dx2));
       })
       .attr("y2", function(d) {
         if (d.source.y == d.target.y) {
           return d.source.y;
         }
-        let dx = d.target.x - d.source.x;
-        let dx2 = dx * dx;
-        let dy = d.target.y - d.source.y;
-        let dy2 = dy * dy;
-        let delta = Math.sqrt(dx2 + dy2);
-        let sign = d.source.y < d.target.y ? 1 : -1;
+        var dx = d.target.x - d.source.x;
+        var dx2 = dx * dx;
+        var dy = d.target.y - d.source.y;
+        var dy2 = dy * dy;
+        var delta = Math.sqrt(dx2 + dy2);
+        var sign = d.source.y < d.target.y ? 1 : -1;
         return d.source.y + sign * (delta - radius) / Math.sqrt(1 + (dx2 / dy2));
       });
 }
 
 function nameToIndex(name, nodes) {
-  for (let i = 0; i < nodes.length; i++) {
+  for (var i = 0; i < nodes.length; i++) {
     if (nodes[i].name == name) {
       return i;
     }
@@ -61,8 +61,8 @@ function nameToIndex(name, nodes) {
 
 getJSON("roots.json", function(rootsData) {
   getJSON("intermediates.json", function(intermediatesData) {
-    let roots = [];
-    for (let root of Object.keys(rootsData)) {
+    var roots = [];
+    for (var root of Object.keys(rootsData)) {
       if (root in intermediatesData) {
         roots.push(root);
       }
@@ -89,20 +89,20 @@ function dragstart(d) {
 // OU, and CN might not be present (although at least one of the three should
 // be). Another wrinkle is that commas may appear in the value of each field.
 function shortenFullName(name) {
-  let cnRegexp = /CN=(.*)$/;
-  let match = name.match(cnRegexp);
+  var cnRegexp = /CN=(.*)$/;
+  var match = name.match(cnRegexp);
   if (match) {
     return match[1];
   }
   // Interestingly, if CN isn't present, OU=... is guaranteed to be last, so we
   // can use more or less the same regular expression.
-  let ouRegexp = /OU=(.*)$/;
+  var ouRegexp = /OU=(.*)$/;
   match = name.match(ouRegexp);
   if (match) {
     return match[1];
   }
   // Same deal with O=...
-  let oRegexp = /O=(.*)$/;
+  var oRegexp = /O=(.*)$/;
   match = name.match(oRegexp);
   if (match) {
     return match[1];
@@ -121,29 +121,29 @@ function doForceMap(root, rootsMap, intermediatesMap) {
     return;
   }
 
-  let nodes = [];
-  let links = [];
+  var nodes = [];
+  var links = [];
 
   d3.select("svg")
       .remove();
 
-  let width = window.screen.availWidth;
-  let height = Math.ceil(0.75 * window.screen.availHeight);
+  var width = window.screen.availWidth;
+  var height = Math.ceil(0.75 * window.screen.availHeight);
 
   nodes.push(newNode(root, width, height));
-  let prevNodeCount = nodes.length;
-  for (let issuee of Object.keys(intermediatesMap[root])) {
+  var prevNodeCount = nodes.length;
+  for (var issuee of Object.keys(intermediatesMap[root])) {
     if (nameToIndex(issuee, nodes) == -1) {
       nodes.push(newNode(issuee, width, height));
     }
   }
   while (prevNodeCount != nodes.length) {
     prevNodeCount = nodes.length;
-    for (let node of nodes) {
-      if (!(node.name in intermediatesMap)) {
+    for (var n of nodes) {
+      if (!(n.name in intermediatesMap)) {
         continue;
       }
-      for (let issuee of Object.keys(intermediatesMap[node.name])) {
+      for (var issuee of Object.keys(intermediatesMap[n.name])) {
         if (nameToIndex(issuee, nodes) == -1) {
           nodes.push(newNode(issuee, width, height));
         }
@@ -151,19 +151,19 @@ function doForceMap(root, rootsMap, intermediatesMap) {
     }
   }
 
-  for (let nodeIndex in nodes) {
+  for (var nodeIndex in nodes) {
     if (!(nodes[nodeIndex].name in intermediatesMap)) {
       continue;
     }
-    for (let issuee of Object.keys(intermediatesMap[nodes[nodeIndex].name])) {
-      let targetIndex = nameToIndex(issuee, nodes);
+    for (var issuee of Object.keys(intermediatesMap[nodes[nodeIndex].name])) {
+      var targetIndex = nameToIndex(issuee, nodes);
       if (targetIndex != nodeIndex) {
         links.push({ source: nodes[nodeIndex], target: nodes[targetIndex] });
       }
     }
   }
 
-  let force = d3.layout.force()
+  var force = d3.layout.force()
     .size([width, height])
     .nodes(nodes)
     .links(links)
@@ -172,7 +172,7 @@ function doForceMap(root, rootsMap, intermediatesMap) {
     .theta(0.8)
     .on("tick", tick);
 
-  let svg = d3.select("body").append("svg")
+  var svg = d3.select("body").append("svg")
     .attr("width", width)
     .attr("height", height);
 
@@ -195,7 +195,7 @@ function doForceMap(root, rootsMap, intermediatesMap) {
       .attr("class", "link")
       .attr("marker-end", "url(#arrow)");
 
-  let drag = force.drag()
+  var drag = force.drag()
     .on("dragstart", dragstart);
 
   node = svg.selectAll(".node")
@@ -221,6 +221,6 @@ function doForceMap(root, rootsMap, intermediatesMap) {
 
   force.start();
   document.getElementById("autocomplete").value = root;
-  let search = "?" + encodeURIComponent(root);
+  var search = "?" + encodeURIComponent(root);
   history.replaceState(null, "", location.origin + location.pathname + search);
 }
