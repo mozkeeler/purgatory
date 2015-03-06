@@ -5,3 +5,15 @@
 .link {
   stroke: black;
 }
+
+.constrained {
+  fill: gray;
+}
+
+.constrained > text {
+  display: none;
+}
+
+.intermediate > text {
+  display: none;
+}
