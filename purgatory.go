@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -27,6 +28,17 @@ func init() {
 	flag.Uint64Var(&maxEntries, "max_entries", 0, "Max entries (0 means all)")
 	flag.StringVar(&rootCAFile, "rootCA_file", "rootCAList.txt", "list of root CA CNs")
 	runtime.GOMAXPROCS(runtime.NumCPU())
+}
+
+type issuee struct {
+	DN                 string
+	PEM                string
+	HasNameConstraints bool
+}
+
+type issuer struct {
+	DN      string
+	Issuees map[string]issuee
 }
 
 func main() {
@@ -71,8 +83,8 @@ func main() {
 	}
 	rootsOut.Write(marshalled)
 
-	issuerMap := make(map[string]map[string]bool) // maps issuer -> subject -> true
-	mapLock := new(sync.Mutex)                    // great opportunity for a Matlock joke
+	issuerMap := make(map[string]issuer)
+	mapLock := new(sync.Mutex) // great opportunity for a Matlock joke
 
 	entriesFile.Map(func(ent *certificatetransparency.EntryAndPosition, err error) {
 		if err != nil {
@@ -90,10 +102,18 @@ func main() {
 				mapLock.Lock()
 				_, present := issuerMap[certIssuerDN]
 				if !present {
-					issuerMap[certIssuerDN] = make(map[string]bool)
+					issuerMap[certIssuerDN] = issuer{certIssuerDN, make(map[string]issuee)}
 				}
 				certSubjectDN := sunlight.DistinguishedNameToString(cert.Subject)
-				issuerMap[certIssuerDN][certSubjectDN] = true
+				_, present = issuerMap[certIssuerDN].Issuees[certSubjectDN]
+				if !present {
+					hasNameConstraints := false
+					if len(cert.PermittedDNSDomains) > 0 {
+						hasNameConstraints = true
+					}
+					pem := base64.StdEncoding.EncodeToString(cert.Raw)
+					issuerMap[certIssuerDN].Issuees[certSubjectDN] = issuee{certSubjectDN, pem, hasNameConstraints}
+				}
 				mapLock.Unlock()
 			}
 		}
