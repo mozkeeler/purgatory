@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -31,6 +32,7 @@ func init() {
 
 type issuee struct {
 	DN                 string
+	PEM                string
 	HasNameConstraints bool
 }
 
@@ -109,7 +111,8 @@ func main() {
 					if len(cert.PermittedDNSDomains) > 0 {
 						hasNameConstraints = true
 					}
-					issuerMap[certIssuerDN].Issuees[certSubjectDN] = issuee{certSubjectDN, hasNameConstraints}
+					pem := base64.StdEncoding.EncodeToString(cert.Raw)
+					issuerMap[certIssuerDN].Issuees[certSubjectDN] = issuee{certSubjectDN, pem, hasNameConstraints}
 				}
 				mapLock.Unlock()
 			}
