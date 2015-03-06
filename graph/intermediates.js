@@ -116,8 +116,9 @@ function shortenFullName(name) {
   return name;
 }
 
-function newNode(name, width, height, constrained) {
-  return { x: width / 2, y: height / 2, name: name, constrained: constrained };
+function newNode(name, width, height, constrained, pem) {
+  return { x: width / 2, y: height / 2, name: name, constrained: constrained,
+           pem: pem };
 }
 
 function doForceMap(root, rootsMap, intermediatesMap) {
@@ -125,6 +126,8 @@ function doForceMap(root, rootsMap, intermediatesMap) {
     console.log(root + " hasn't issued any intermediates?");
     return;
   }
+
+  setCertsplainerEnabled(false);
 
   var nodes = [];
   var links = [];
@@ -135,12 +138,13 @@ function doForceMap(root, rootsMap, intermediatesMap) {
   var width = window.screen.availWidth;
   var height = Math.ceil(0.75 * window.screen.availHeight);
 
-  nodes.push(newNode(root, width, height, false));
+  nodes.push(newNode(root, width, height, false, null));
   var prevNodeCount = nodes.length;
   for (var issueeDN in intermediatesMap[root].Issuees) {
     var issuee = intermediatesMap[root].Issuees[issueeDN];
     if (nameToIndex(issuee.DN, nodes) == -1) {
-      nodes.push(newNode(issuee.DN, width, height, issuee.HasNameConstraints));
+      nodes.push(newNode(issuee.DN, width, height, issuee.HasNameConstraints,
+                         issuee.PEM));
     }
   }
   while (prevNodeCount != nodes.length) {
@@ -153,7 +157,7 @@ function doForceMap(root, rootsMap, intermediatesMap) {
         var issuee = intermediatesMap[n.name].Issuees[issueeDN];
         if (nameToIndex(issuee.DN, nodes) == -1) {
           nodes.push(newNode(issuee.DN, width, height,
-                             issuee.HasNameConstraints));
+                             issuee.HasNameConstraints, issuee.PEM));
         }
       }
     }
@@ -218,6 +222,11 @@ function doForceMap(root, rootsMap, intermediatesMap) {
                                             : "intermediate"; })
       .call(drag);
   node.append("circle")
+    .on("dblclick", function(d) {
+      if (d.pem) {
+        examineCert(d.pem);
+      }
+    })
     .attr("r", radius)
     .append("svg:title")
     .text(function(d) { return d.name; });
@@ -237,4 +246,22 @@ function doForceMap(root, rootsMap, intermediatesMap) {
   document.getElementById("autocomplete").value = root;
   var search = "?" + encodeURIComponent(root);
   history.replaceState(null, "", location.origin + location.pathname + search);
+}
+
+function setCertsplainerEnabled(enable) {
+  var certsplainerOuter = document.getElementById("certsplainerOuter");
+  if (enable) {
+    certsplainerOuter.setAttribute("class", "enabled");
+  } else {
+    certsplainerOuter.setAttribute("class", "disabled");
+  }
+}
+
+function examineCert(pem) {
+  setCertsplainerEnabled(true);
+  var frame = document.getElementById("certsplainer");
+  frame.setAttribute("class", "enabled");
+  frame.width = "600px";
+  frame.height = Math.ceil(0.75 * window.screen.availHeight) + "px";
+  frame.src = "certsplainer/?" + pem;
 }
