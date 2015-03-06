@@ -21,7 +21,9 @@ var link;
 var radius = 8;
 
 function tick() {
-  node.attr("transform", function(d) { return "translate(" + d.x + ", " + d.y + ")"; });
+  node.attr("transform", function(d) {
+    return "translate(" + d.x + ", " + d.y + ")";
+  });
   link.attr("x1", function(d) { return d.source.x; })
       .attr("y1", function(d) { return d.source.y; })
       .attr("x2", function(d) {
@@ -34,7 +36,8 @@ function tick() {
         var dy2 = dy * dy;
         var delta = Math.sqrt(dx2 + dy2);
         var sign = d.source.x < d.target.x ? 1 : -1;
-        return d.source.x + sign * (delta - radius) / Math.sqrt(1 + (dy2 / dx2));
+        return d.source.x + sign * (delta - radius) /
+                            Math.sqrt(1 + (dy2 / dx2));
       })
       .attr("y2", function(d) {
         if (d.source.y == d.target.y) {
@@ -46,7 +49,8 @@ function tick() {
         var dy2 = dy * dy;
         var delta = Math.sqrt(dx2 + dy2);
         var sign = d.source.y < d.target.y ? 1 : -1;
-        return d.source.y + sign * (delta - radius) / Math.sqrt(1 + (dx2 / dy2));
+        return d.source.y + sign * (delta - radius) /
+                            Math.sqrt(1 + (dx2 / dy2));
       });
 }
 
@@ -74,8 +78,9 @@ getJSON("roots.json", function(rootsData) {
         doForceMap(suggestion.item.value, rootsData, intermediatesData);
       }
     });
-    doForceMap(location.search ? decodeURIComponent(location.search.substring(1))
-                               : roots[0],
+    doForceMap(location.search
+               ? decodeURIComponent(location.search.substring(1))
+               : roots[0],
                rootsData, intermediatesData);
   });
 });
@@ -111,8 +116,9 @@ function shortenFullName(name) {
   return name;
 }
 
-function newNode(name, width, height) {
-  return { x: width / 2, y: height / 2, name: name };
+function newNode(name, width, height, constrained, pem) {
+  return { x: width / 2, y: height / 2, name: name, constrained: constrained,
+           pem: pem };
 }
 
 function doForceMap(root, rootsMap, intermediatesMap) {
@@ -120,6 +126,8 @@ function doForceMap(root, rootsMap, intermediatesMap) {
     console.log(root + " hasn't issued any intermediates?");
     return;
   }
+
+  setCertsplainerEnabled(false);
 
   var nodes = [];
   var links = [];
@@ -130,11 +138,13 @@ function doForceMap(root, rootsMap, intermediatesMap) {
   var width = window.screen.availWidth;
   var height = Math.ceil(0.75 * window.screen.availHeight);
 
-  nodes.push(newNode(root, width, height));
+  nodes.push(newNode(root, width, height, false, null));
   var prevNodeCount = nodes.length;
-  for (var issuee of Object.keys(intermediatesMap[root])) {
-    if (nameToIndex(issuee, nodes) == -1) {
-      nodes.push(newNode(issuee, width, height));
+  for (var issueeDN in intermediatesMap[root].Issuees) {
+    var issuee = intermediatesMap[root].Issuees[issueeDN];
+    if (nameToIndex(issuee.DN, nodes) == -1) {
+      nodes.push(newNode(issuee.DN, width, height, issuee.HasNameConstraints,
+                         issuee.PEM));
     }
   }
   while (prevNodeCount != nodes.length) {
@@ -143,9 +153,11 @@ function doForceMap(root, rootsMap, intermediatesMap) {
       if (!(n.name in intermediatesMap)) {
         continue;
       }
-      for (var issuee of Object.keys(intermediatesMap[n.name])) {
-        if (nameToIndex(issuee, nodes) == -1) {
-          nodes.push(newNode(issuee, width, height));
+      for (var issueeDN in intermediatesMap[n.name].Issuees) {
+        var issuee = intermediatesMap[n.name].Issuees[issueeDN];
+        if (nameToIndex(issuee.DN, nodes) == -1) {
+          nodes.push(newNode(issuee.DN, width, height,
+                             issuee.HasNameConstraints, issuee.PEM));
         }
       }
     }
@@ -155,9 +167,10 @@ function doForceMap(root, rootsMap, intermediatesMap) {
     if (!(nodes[nodeIndex].name in intermediatesMap)) {
       continue;
     }
-    for (var issuee of Object.keys(intermediatesMap[nodes[nodeIndex].name])) {
-      var targetIndex = nameToIndex(issuee, nodes);
-      if (targetIndex != nodeIndex) {
+    for (var issueeDN in intermediatesMap[nodes[nodeIndex].name].Issuees) {
+      var issuee = intermediatesMap[nodes[nodeIndex].name].Issuees[issueeDN];
+      var targetIndex = nameToIndex(issuee.DN, nodes);
+      if (targetIndex > -1 && targetIndex != nodeIndex) {
         links.push({ source: nodes[nodeIndex], target: nodes[targetIndex] });
       }
     }
@@ -170,6 +183,7 @@ function doForceMap(root, rootsMap, intermediatesMap) {
     .linkDistance(140)
     .charge(-80)
     .theta(0.8)
+    .gravity(0.07)
     .on("tick", tick);
 
   var svg = d3.select("body").append("svg")
@@ -201,9 +215,18 @@ function doForceMap(root, rootsMap, intermediatesMap) {
   node = svg.selectAll(".node")
     .data(nodes)
     .enter().append("g")
-      .attr("class", function(d) { return rootsMap[d.name] ? "root" : "intermediate"; })
+      .attr("class", function(d) { return rootsMap[d.name]
+                                          ? "root"
+                                          : d.constrained
+                                            ? "constrained"
+                                            : "intermediate"; })
       .call(drag);
   node.append("circle")
+    .on("dblclick", function(d) {
+      if (d.pem) {
+        examineCert(d.pem);
+      }
+    })
     .attr("r", radius)
     .append("svg:title")
     .text(function(d) { return d.name; });
@@ -223,4 +246,22 @@ function doForceMap(root, rootsMap, intermediatesMap) {
   document.getElementById("autocomplete").value = root;
   var search = "?" + encodeURIComponent(root);
   history.replaceState(null, "", location.origin + location.pathname + search);
+}
+
+function setCertsplainerEnabled(enable) {
+  var certsplainerOuter = document.getElementById("certsplainerOuter");
+  if (enable) {
+    certsplainerOuter.setAttribute("class", "enabled");
+  } else {
+    certsplainerOuter.setAttribute("class", "disabled");
+  }
+}
+
+function examineCert(pem) {
+  setCertsplainerEnabled(true);
+  var frame = document.getElementById("certsplainer");
+  frame.setAttribute("class", "enabled");
+  frame.width = "600px";
+  frame.height = Math.ceil(0.75 * window.screen.availHeight) + "px";
+  frame.src = "certsplainer/?" + pem;
 }

@@ -5,3 +5,29 @@
 .link {
   stroke: black;
 }
+
+.constrained {
+  fill: gray;
+}
+
+.constrained > text {
+  display: none;
+}
+
+.intermediate > text {
+  display: none;
+}
+
+#certsplainerOuter {
+  position: absolute;
+  left: 0px;
+  top: 40px;
+}
+
+#close {
+  cursor: default;
+}
+
+.disabled {
+  display: none;
+}
