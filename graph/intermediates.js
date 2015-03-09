@@ -263,5 +263,9 @@ function examineCert(pem) {
   frame.setAttribute("class", "enabled");
   frame.width = "600px";
   frame.height = Math.ceil(0.75 * window.screen.availHeight) + "px";
-  frame.src = "certsplainer/?" + pem;
+  frame.src = "certsplainer/";
+  frame.onload = function() {
+    frame.contentWindow.postMessage({ pem: pem, asEndEntity: false },
+                                    document.location.origin);
+  };
 }
