@@ -143,8 +143,10 @@ function doForceMap(root, rootsMap, intermediatesMap) {
   for (var issueeDN in intermediatesMap[root].Issuees) {
     var issuee = intermediatesMap[root].Issuees[issueeDN];
     if (nameToIndex(issuee.DN, nodes) == -1) {
-      nodes.push(newNode(issuee.DN, width, height, issuee.HasNameConstraints,
-                         issuee.PEM));
+      nodes.push(
+        newNode(issuee.DN, width, height,
+                issuee.HasNameConstraints || issuee.IsLengthConstrained,
+                issuee.PEM));
     }
   }
   while (prevNodeCount != nodes.length) {
@@ -156,8 +158,10 @@ function doForceMap(root, rootsMap, intermediatesMap) {
       for (var issueeDN in intermediatesMap[n.name].Issuees) {
         var issuee = intermediatesMap[n.name].Issuees[issueeDN];
         if (nameToIndex(issuee.DN, nodes) == -1) {
-          nodes.push(newNode(issuee.DN, width, height,
-                             issuee.HasNameConstraints, issuee.PEM));
+          nodes.push(
+            newNode(issuee.DN, width, height,
+                    issuee.HasNameConstraints || issuee.IsLengthConstrained,
+                    issuee.PEM));
         }
       }
     }
@@ -224,7 +228,7 @@ function doForceMap(root, rootsMap, intermediatesMap) {
   node.append("circle")
     .on("dblclick", function(d) {
       if (d.pem) {
-        examineCert(d.pem);
+        examineCert(d.pem, d.name);
       }
     })
     .attr("r", radius)
@@ -257,7 +261,7 @@ function setCertsplainerEnabled(enable) {
   }
 }
 
-function examineCert(pem) {
+function examineCert(pem, name) {
   setCertsplainerEnabled(true);
   var frame = document.getElementById("certsplainer");
   frame.setAttribute("class", "enabled");
@@ -268,4 +272,6 @@ function examineCert(pem) {
     frame.contentWindow.postMessage({ pem: pem, asEndEntity: false },
                                     document.location.origin);
   };
+  var link = document.getElementById("brStats");
+  link.href = "/dashboard/?" + encodeURIComponent(name);
 }

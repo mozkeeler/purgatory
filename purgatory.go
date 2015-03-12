@@ -31,9 +31,10 @@ func init() {
 }
 
 type issuee struct {
-	DN                 string
-	PEM                string
-	HasNameConstraints bool
+	DN                  string
+	PEM                 string
+	HasNameConstraints  bool
+	IsLengthConstrained bool
 }
 
 type issuer struct {
@@ -107,12 +108,10 @@ func main() {
 				certSubjectDN := sunlight.DistinguishedNameToString(cert.Subject)
 				_, present = issuerMap[certIssuerDN].Issuees[certSubjectDN]
 				if !present {
-					hasNameConstraints := false
-					if len(cert.PermittedDNSDomains) > 0 {
-						hasNameConstraints = true
-					}
+					hasNameConstraints := len(cert.PermittedDNSDomains) > 0
+					isLengthConstrained := cert.BasicConstraintsValid && cert.MaxPathLen == 0
 					pem := base64.StdEncoding.EncodeToString(cert.Raw)
-					issuerMap[certIssuerDN].Issuees[certSubjectDN] = issuee{certSubjectDN, pem, hasNameConstraints}
+					issuerMap[certIssuerDN].Issuees[certSubjectDN] = issuee{certSubjectDN, pem, hasNameConstraints, isLengthConstrained}
 				}
 				mapLock.Unlock()
 			}
