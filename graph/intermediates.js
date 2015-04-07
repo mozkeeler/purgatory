@@ -145,7 +145,7 @@ function doForceMap(root, rootsMap, intermediatesMap) {
     if (nameToIndex(issuee.DN, nodes) == -1) {
       nodes.push(
         newNode(issuee.DN, width, height,
-                issuee.HasNameConstraints || issuee.IsLengthConstrained,
+                issuee.HasNameConstraints,
                 issuee.PEM));
     }
   }
@@ -160,7 +160,7 @@ function doForceMap(root, rootsMap, intermediatesMap) {
         if (nameToIndex(issuee.DN, nodes) == -1) {
           nodes.push(
             newNode(issuee.DN, width, height,
-                    issuee.HasNameConstraints || issuee.IsLengthConstrained,
+                    issuee.HasNameConstraints,
                     issuee.PEM));
         }
       }
